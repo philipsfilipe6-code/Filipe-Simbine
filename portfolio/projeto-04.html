@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineStream — Estudo de caso</title>
+<meta name="description" content="Grelha de catálogo de vídeo com destaque ao passar o rato e modal de detalhes em JavaScript puro.">
+<style>
+  :root {
+    --fundo: #101013;
+    --texto: #f2f2f2;
+    --texto-suave: #a3a3ab;
+    --destaque: #e5484d;
+    --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--fonte); background: var(--fundo); color: var(--texto); line-height: 1.5; }
+  .container { max-width: 1100px; margin-inline: auto; padding-inline: 1.5rem; }
+  a { color: inherit; text-decoration: none; }
+
+  header { padding: 1.1rem 0; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }
+  nav { display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-weight: 800; font-size: 1.3rem; color: var(--destaque); letter-spacing: -0.02em; }
+  .voltar { font-size: 0.85rem; color: var(--texto-suave); }
+  .voltar:hover { color: #fff; }
+
+  .hero {
+    height: 60vh; min-height: 340px;
+    background: linear-gradient(0deg, var(--fundo), transparent 60%), linear-gradient(120deg, #3a1010, #1a1030);
+    display: flex; align-items: flex-end; padding-bottom: 3rem;
+  }
+  .hero__conteudo h1 { font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+  .hero__conteudo p { color: var(--texto-suave); max-width: 50ch; margin-bottom: 1.25rem; }
+  .botao { display: inline-block; padding: 0.75rem 1.6rem; border-radius: 6px; font-weight: 700; margin-right: 0.6rem; }
+  .botao--primario { background: #fff; color: #000; }
+  .botao--secundario { background: rgba(255,255,255,0.18); color: #fff; }
+
+  section.catalogo { padding: 2rem 0 4rem; }
+  h2.titulo-secao { font-size: 1.3rem; margin-bottom: 1.25rem; }
+  .grelha { display: grid; gap: 0.9rem; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .titulo-cartao {
+    position: relative;
+    aspect-ratio: 2/3;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: linear-gradient(160deg, var(--cor-a, #333), var(--cor-b, #111));
+    display: flex; align-items: flex-end;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .titulo-cartao:hover, .titulo-cartao:focus-visible {
+    transform: scale(1.06);
+    z-index: 2;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  }
+  .titulo-cartao__nome { padding: 0.7rem; font-size: 0.85rem; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+
+  /* Modal */
+  .modal-fundo {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: none; align-items: center; justify-content: center; padding: 1.5rem; z-index: 50;
+  }
+  .modal-fundo.aberto { display: flex; }
+  .modal {
+    background: #1a1a1e; border-radius: 14px; max-width: 480px; width: 100%;
+    padding: 2rem; position: relative;
+  }
+  .modal__fechar {
+    position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.1);
+    border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem;
+  }
+  .modal h3 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .modal__meta { color: var(--texto-suave); font-size: 0.85rem; margin-bottom: 1rem; }
+  .modal__sinopse { color: #d7d7db; font-size: 0.95rem; }
+
+  footer { text-align: center; padding: 2.5rem 0; color: var(--texto-suave); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="container">
+    <span class="logo">CineStream</span>
+    <a class="voltar" href="javascript:window.close() || history.back()">← Voltar ao portfólio</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="container hero__conteudo">
+    <h1>Horizonte Vermelho</h1>
+    <p>Uma equipa de exploradores descobre que o planeta que deveriam colonizar já tem um segredo antigo à espera deles.</p>
+    <a class="botao botao--primario" href="#catalogo">▶ Reproduzir</a>
+    <a class="botao botao--secundario" href="#catalogo">Mais informações</a>
+  </div>
+</section>
+
+<section class="catalogo container" id="catalogo">
+  <h2 class="titulo-secao">Em alta esta semana</h2>
+  <div class="grelha" id="grelha-titulos"></div>
+</section>
+
+<div class="modal-fundo" id="modal-fundo">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <button class="modal__fechar" id="modal-fechar" aria-label="Fechar">✕</button>
+    <h3 id="modal-titulo"></h3>
+    <p class="modal__meta" id="modal-meta"></p>
+    <p class="modal__sinopse" id="modal-sinopse"></p>
+  </div>
+</div>
+
+<footer>
+  Projeto de demonstração criado por Milionário — títulos e imagens fictícios, apenas para fins de portfólio.
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var titulos = [
+    { nome: 'Horizonte Vermelho', meta: 'Ficção científica · 2h 08m', sinopse: 'Uma equipa de exploradores descobre que o planeta que deveriam colonizar já tem um segredo antigo à espera deles.', cores: ['#5a1a1a', '#150505'] },
+    { nome: 'A Última Rua', meta: 'Drama · 1h 52m', sinopse: 'Um jovem tenta salvar o bairro onde cresceu antes que seja vendido a uma construtora.', cores: ['#1a3a3a', '#051010'] },
+    { nome: 'Código Sombra', meta: 'Suspense · 1h 45m', sinopse: 'Uma analista de segurança descobre uma falha que pode expor milhões de contas — mas alguém não quer que ela fale.', cores: ['#2a1a4a', '#0a0515'] },
+    { nome: 'Marés Altas', meta: 'Documentário · 1h 10m', sinopse: 'Pescadores da costa contam como se adaptaram a duas décadas de mudanças no oceano.', cores: ['#144a4a', '#031515'] },
+    { nome: 'Noites de Maputo', meta: 'Comédia · 1h 38m', sinopse: 'Três amigos tentam organizar o evento perfeito antes que tudo — literalmente tudo — dê errado.', cores: ['#4a3a14', '#151005'] },
+    { nome: 'Fronteira Digital', meta: 'Ficção científica · 2h 02m', sinopse: 'Num futuro próximo, uma equipa de hackers precisa decidir até onde vai a lealdade a um algoritmo.', cores: ['#1a2a4a', '#050a15'] },
+    { nome: 'Pequenas Vitórias', meta: 'Drama · 1h 40m', sinopse: 'Uma treinadora de futebol feminino luta por reconhecimento numa liga que insiste em ignorá-la.', cores: ['#4a1a3a', '#150515'] },
+    { nome: 'O Último Sinal', meta: 'Suspense · 1h 55m', sinopse: 'Um operador de rádio isolado capta uma transmissão que não deveria existir.', cores: ['#1a4a2a', '#051505'] }
+  ];
+
+  var grelha = document.getElementById('grelha-titulos');
+  var modalFundo = document.getElementById('modal-fundo');
+  var modalTitulo = document.getElementById('modal-titulo');
+  var modalMeta = document.getElementById('modal-meta');
+  var modalSinopse = document.getElementById('modal-sinopse');
+  var modalFechar = document.getElementById('modal-fechar');
+  var ultimoFoco = null;
+
+  titulos.forEach(function (t, i) {
+    var cartao = document.createElement('div');
+    cartao.className = 'titulo-cartao';
+    cartao.style.setProperty('--cor-a', t.cores[0]);
+    cartao.style.setProperty('--cor-b', t.cores[1]);
+    cartao.tabIndex = 0;
+    cartao.setAttribute('role', 'button');
+    cartao.setAttribute('aria-label', 'Ver detalhes de ' + t.nome);
+    cartao.innerHTML = '<span class="titulo-cartao__nome">' + t.nome + '</span>';
+
+    function abrir() {
+      ultimoFoco = document.activeElement;
+      modalTitulo.textContent = t.nome;
+      modalMeta.textContent = t.meta;
+      modalSinopse.textContent = t.sinopse;
+      modalFundo.classList.add('aberto');
+      modalFechar.focus();
+    }
+    cartao.addEventListener('click', abrir);
+    cartao.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); }
+    });
+    grelha.appendChild(cartao);
+  });
+
+  function fechar() {
+    modalFundo.classList.remove('aberto');
+    if (ultimoFoco) ultimoFoco.focus();
+  }
+  modalFechar.addEventListener('click', fechar);
+  modalFundo.addEventListener('click', function (e) { if (e.target === modalFundo) fechar(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modalFundo.classList.contains('aberto')) fechar();
+  });
+})();
+</script>
+
+</body>
+</html>
