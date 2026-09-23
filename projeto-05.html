@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ondas Music — Estudo de caso</title>
+<meta name="description" content="Leitor de música com lista de faixas, barra de progresso e controlos reais, em JavaScript vanilla.">
+<style>
+  :root {
+    --fundo: #121212;
+    --fundo-cartao: #181818;
+    --fundo-hover: #282828;
+    --texto: #f2f2f2;
+    --texto-suave: #a7a7a7;
+    --destaque: #1ed760;
+    --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--fonte); background: var(--fundo); color: var(--texto); line-height: 1.5; padding-bottom: 100px; }
+  .container { max-width: 760px; margin-inline: auto; padding-inline: 1.5rem; }
+  a { color: inherit; text-decoration: none; }
+
+  header { padding: 1.1rem 0; }
+  nav { display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-weight: 800; font-size: 1.2rem; color: var(--destaque); }
+  .voltar { font-size: 0.85rem; color: var(--texto-suave); }
+  .voltar:hover { color: #fff; }
+
+  .topo-playlist { display: flex; gap: 1.5rem; align-items: flex-end; padding: 2rem 0; }
+  .capa-playlist {
+    width: 140px; height: 140px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(140deg, #1ed760, #0a5c2a);
+    display: flex; align-items: center; justify-content: center; font-size: 2.5rem;
+  }
+  .info-playlist p { color: var(--texto-suave); font-size: 0.85rem; }
+  .info-playlist h1 { font-size: clamp(1.6rem, 5vw, 2.4rem); margin: 0.3rem 0; }
+
+  .lista-faixas { padding-bottom: 2rem; }
+  .faixa {
+    display: grid; grid-template-columns: 28px 1fr auto; gap: 1rem; align-items: center;
+    padding: 0.65rem 0.75rem; border-radius: 6px; cursor: pointer;
+  }
+  .faixa:hover, .faixa.ativa { background: var(--fundo-hover); }
+  .faixa__numero { color: var(--texto-suave); font-size: 0.9rem; text-align: center; }
+  .faixa.ativa .faixa__numero { color: var(--destaque); }
+  .faixa__info { min-width: 0; }
+  .faixa__titulo { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .faixa.ativa .faixa__titulo { color: var(--destaque); }
+  .faixa__artista { color: var(--texto-suave); font-size: 0.82rem; }
+  .faixa__duracao { color: var(--texto-suave); font-size: 0.85rem; }
+
+  .barra-reprodutor {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: #181818; border-top: 1px solid #282828;
+    padding: 0.85rem 1.5rem;
+  }
+  .reprodutor-conteudo { max-width: 760px; margin-inline: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+  .reprodutor-info { display: flex; justify-content: space-between; align-items: center; }
+  .reprodutor-faixa { font-size: 0.85rem; }
+  .reprodutor-faixa strong { display: block; }
+  .reprodutor-faixa span { color: var(--texto-suave); font-size: 0.78rem; }
+
+  .controlos { display: flex; align-items: center; gap: 1.25rem; }
+  .controlos button {
+    background: none; border: none; color: var(--texto); cursor: pointer; font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .controlos button.principal {
+    background: #fff; color: #000; width: 36px; height: 36px; border-radius: 50%;
+  }
+  .controlos button:hover { color: #fff; }
+
+  .barra-progresso-linha { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; color: var(--texto-suave); }
+  .barra-progresso {
+    flex: 1; height: 4px; background: #4a4a4a; border-radius: 4px; cursor: pointer; position: relative;
+  }
+  .barra-progresso__preenchida { height: 100%; background: var(--destaque); border-radius: 4px; width: 0%; }
+
+  footer { text-align: center; padding: 1.5rem 0; color: var(--texto-suave); font-size: 0.78rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="container">
+    <span class="logo">Ondas Music</span>
+    <a class="voltar" href="javascript:window.close() || history.back()">← Voltar ao portfólio</a>
+  </nav>
+</header>
+
+<main class="container">
+  <div class="topo-playlist">
+    <div class="capa-playlist">🎵</div>
+    <div class="info-playlist">
+      <p>Lista de reprodução</p>
+      <h1>Foco &amp; Código</h1>
+      <p>8 faixas · demonstração instrumental</p>
+    </div>
+  </div>
+
+  <div class="lista-faixas" id="lista-faixas"></div>
+</main>
+
+<div class="barra-reprodutor">
+  <div class="reprodutor-conteudo">
+    <div class="reprodutor-info">
+      <div class="reprodutor-faixa">
+        <strong id="rep-titulo">Selecione uma faixa</strong>
+        <span id="rep-artista">—</span>
+      </div>
+      <div class="controlos">
+        <button id="btn-anterior" aria-label="Faixa anterior">⏮</button>
+        <button id="btn-tocar" class="principal" aria-label="Reproduzir">▶</button>
+        <button id="btn-seguinte" aria-label="Próxima faixa">⏭</button>
+      </div>
+    </div>
+    <div class="barra-progresso-linha">
+      <span id="tempo-atual">0:00</span>
+      <div class="barra-progresso" id="barra-progresso">
+        <div class="barra-progresso__preenchida" id="barra-preenchida"></div>
+      </div>
+      <span id="tempo-total">0:00</span>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Projeto de demonstração criado por Milionário — sem áudio real, apenas simulação de reprodução; faixas fictícias.
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var faixas = [
+    { titulo: 'Manhã em Maputo', artista: 'Instrumental Lo-fi', duracao: 172 },
+    { titulo: 'Linhas de Código', artista: 'Instrumental Lo-fi', duracao: 205 },
+    { titulo: 'Café às Nove', artista: 'Instrumental Lo-fi', duracao: 158 },
+    { titulo: 'Rede Estável', artista: 'Ambiente Suave', duracao: 190 },
+    { titulo: 'Deploy Sereno', artista: 'Ambiente Suave', duracao: 221 },
+    { titulo: 'Terminal Aberto', artista: 'Instrumental Lo-fi', duracao: 164 },
+    { titulo: 'Fim de Expediente', artista: 'Ambiente Suave', duracao: 198 },
+    { titulo: 'Backup Completo', artista: 'Instrumental Lo-fi', duracao: 176 }
+  ];
+
+  var indiceAtual = 0;
+  var tocando = false;
+  var tempoDecorrido = 0;
+  var intervalo = null;
+
+  var lista = document.getElementById('lista-faixas');
+  var btnTocar = document.getElementById('btn-tocar');
+  var repTitulo = document.getElementById('rep-titulo');
+  var repArtista = document.getElementById('rep-artista');
+  var tempoAtualEl = document.getElementById('tempo-atual');
+  var tempoTotalEl = document.getElementById('tempo-total');
+  var barraProgresso = document.getElementById('barra-progresso');
+  var barraPreenchida = document.getElementById('barra-preenchida');
+
+  function formatarTempo(segundos) {
+    var m = Math.floor(segundos / 60);
+    var s = Math.floor(segundos % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function renderizarLista() {
+    lista.innerHTML = '';
+    faixas.forEach(function (f, i) {
+      var el = document.createElement('div');
+      el.className = 'faixa' + (i === indiceAtual ? ' ativa' : '');
+      el.innerHTML =
+        '<span class="faixa__numero">' + (i === indiceAtual && tocando ? '♪' : (i + 1)) + '</span>' +
+        '<div class="faixa__info"><div class="faixa__titulo">' + f.titulo + '</div><div class="faixa__artista">' + f.artista + '</div></div>' +
+        '<span class="faixa__duracao">' + formatarTempo(f.duracao) + '</span>';
+      el.addEventListener('click', function () { selecionarFaixa(i); reproduzir(); });
+      lista.appendChild(el);
+    });
+  }
+
+  function atualizarReprodutor() {
+    var f = faixas[indiceAtual];
+    repTitulo.textContent = f.titulo;
+    repArtista.textContent = f.artista;
+    tempoTotalEl.textContent = formatarTempo(f.duracao);
+    tempoAtualEl.textContent = formatarTempo(tempoDecorrido);
+    barraPreenchida.style.width = (tempoDecorrido / f.duracao * 100) + '%';
+    btnTocar.textContent = tocando ? '⏸' : '▶';
+    btnTocar.setAttribute('aria-label', tocando ? 'Pausar' : 'Reproduzir');
+  }
+
+  function selecionarFaixa(i) {
+    indiceAtual = (i + faixas.length) % faixas.length;
+    tempoDecorrido = 0;
+    renderizarLista();
+    atualizarReprodutor();
+  }
+
+  function passoTempo() {
+    var f = faixas[indiceAtual];
+    tempoDecorrido += 1;
+    if (tempoDecorrido >= f.duracao) {
+      selecionarFaixa(indiceAtual + 1);
+      reproduzir();
+      return;
+    }
+    atualizarReprodutor();
+  }
+
+  function reproduzir() {
+    tocando = true;
+    atualizarReprodutor();
+    renderizarLista();
+    clearInterval(intervalo);
+    intervalo = setInterval(passoTempo, 1000);
+  }
+
+  function pausar() {
+    tocando = false;
+    atualizarReprodutor();
+    renderizarLista();
+    clearInterval(intervalo);
+  }
+
+  btnTocar.addEventListener('click', function () { tocando ? pausar() : reproduzir(); });
+  document.getElementById('btn-anterior').addEventListener('click', function () {
+    selecionarFaixa(indiceAtual - 1);
+    if (tocando) reproduzir(); else atualizarReprodutor();
+  });
+  document.getElementById('btn-seguinte').addEventListener('click', function () {
+    selecionarFaixa(indiceAtual + 1);
+    if (tocando) reproduzir(); else atualizarReprodutor();
+  });
+
+  barraProgresso.addEventListener('click', function (e) {
+    var rect = barraProgresso.getBoundingClientRect();
+    var proporcao = (e.clientX - rect.left) / rect.width;
+    tempoDecorrido = Math.max(0, Math.min(1, proporcao)) * faixas[indiceAtual].duracao;
+    atualizarReprodutor();
+  });
+
+  renderizarLista();
+  atualizarReprodutor();
+})();
+</script>
+
+</body>
+</html>
